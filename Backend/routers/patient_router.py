@@ -70,7 +70,7 @@ async def generate_patient_analysis(
 
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        api_key = "AIzaSyDdSHgjW6z2_N5WRbE7FEvL65wVAV2IIt0"
+        api_key = ""
         
     client = genai.Client(api_key=api_key)
     
