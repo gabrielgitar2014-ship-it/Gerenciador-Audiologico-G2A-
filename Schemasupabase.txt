@@ -1,0 +1,146 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.audiometric_exams (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  employee_id uuid NOT NULL,
+  company_id uuid NOT NULL,
+  professional_id uuid,
+  exam_date date NOT NULL DEFAULT CURRENT_DATE,
+  exam_type text NOT NULL CHECK (exam_type = ANY (ARRAY['admissional'::text, 'periodico'::text, 'demissional'::text, 'mudanca_risco'::text, 'retorno_trabalho'::text, 'reteste'::text])),
+  is_reference boolean DEFAULT false,
+  rest_hours_ok boolean NOT NULL DEFAULT false,
+  meatoscopy_ok boolean NOT NULL DEFAULT true,
+  thresholds_od_air jsonb,
+  thresholds_oe_air jsonb,
+  thresholds_od_bone jsonb,
+  thresholds_oe_bone jsonb,
+  speech_srt_od numeric,
+  speech_srt_oe numeric,
+  speech_iprf_od numeric,
+  speech_iprf_oe numeric,
+  result_status USER-DEFINED DEFAULT 'normal'::exam_result,
+  diagnosis_text text,
+  created_at timestamp with time zone DEFAULT now(),
+  last_edited_at timestamp with time zone,
+  last_edited_by uuid,
+  edit_reason text,
+  CONSTRAINT audiometric_exams_pkey PRIMARY KEY (id),
+  CONSTRAINT audiometric_exams_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id),
+  CONSTRAINT audiometric_exams_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id),
+  CONSTRAINT audiometric_exams_professional_id_fkey FOREIGN KEY (professional_id) REFERENCES public.profiles(id),
+  CONSTRAINT audiometric_exams_last_edited_by_fkey FOREIGN KEY (last_edited_by) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.clinical_evolutions (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  employee_id uuid NOT NULL,
+  professional_id uuid NOT NULL,
+  content text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT clinical_evolutions_pkey PRIMARY KEY (id),
+  CONSTRAINT clinical_evolutions_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id),
+  CONSTRAINT clinical_evolutions_professional_id_fkey FOREIGN KEY (professional_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.companies (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  owner_id uuid NOT NULL,
+  razao_social text NOT NULL,
+  nome_fantasia text NOT NULL,
+  cnpj text NOT NULL UNIQUE,
+  cep text,
+  logradouro text,
+  cidade text,
+  estado text,
+  medico_coordenador_nome text,
+  medico_coordenador_crm text,
+  medico_coordenador_uf text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT companies_pkey PRIMARY KEY (id),
+  CONSTRAINT companies_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.employee_addresses (
+  employee_id uuid NOT NULL,
+  cep text,
+  street text,
+  number text,
+  neighborhood text,
+  city text,
+  state text,
+  phone text,
+  email text,
+  CONSTRAINT employee_addresses_pkey PRIMARY KEY (employee_id),
+  CONSTRAINT employee_addresses_employee_id_fkey FOREIGN KEY (employee_id) REFERENCES public.employees(id)
+);
+CREATE TABLE public.employees (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  company_id uuid NOT NULL,
+  full_name text NOT NULL,
+  cpf text,
+  birth_date date,
+  gender USER-DEFINED,
+  rg text,
+  matricula text,
+  sector_id uuid,
+  job_role_id uuid,
+  ghe_id uuid,
+  admission_date date,
+  is_active boolean DEFAULT true,
+  demission_date date,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT employees_pkey PRIMARY KEY (id),
+  CONSTRAINT employees_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id),
+  CONSTRAINT employees_sector_id_fkey FOREIGN KEY (sector_id) REFERENCES public.sectors(id),
+  CONSTRAINT employees_job_role_id_fkey FOREIGN KEY (job_role_id) REFERENCES public.job_roles(id),
+  CONSTRAINT employees_ghe_id_fkey FOREIGN KEY (ghe_id) REFERENCES public.ghe(id)
+);
+CREATE TABLE public.epidemiological_reports (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  company_id uuid,
+  year character varying NOT NULL,
+  report_text text NOT NULL,
+  generated_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT epidemiological_reports_pkey PRIMARY KEY (id),
+  CONSTRAINT epidemiological_reports_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id),
+  CONSTRAINT epidemiological_reports_generated_by_fkey FOREIGN KEY (generated_by) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.ghe (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  company_id uuid NOT NULL,
+  name text NOT NULL,
+  has_noise_risk boolean DEFAULT false,
+  noise_level_db numeric,
+  has_chemical_risk boolean DEFAULT false,
+  epi_ca text,
+  epi_nrrsf numeric,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT ghe_pkey PRIMARY KEY (id),
+  CONSTRAINT ghe_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id)
+);
+CREATE TABLE public.job_roles (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  company_id uuid NOT NULL,
+  name text NOT NULL,
+  cbo text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT job_roles_pkey PRIMARY KEY (id),
+  CONSTRAINT job_roles_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  full_name text NOT NULL CHECK (char_length(full_name) >= 3),
+  avatar_url text,
+  updated_at timestamp with time zone,
+  crfa_numero text,
+  crfa_regiao text,
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.sectors (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  company_id uuid NOT NULL,
+  name text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT sectors_pkey PRIMARY KEY (id),
+  CONSTRAINT sectors_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id)
+);
