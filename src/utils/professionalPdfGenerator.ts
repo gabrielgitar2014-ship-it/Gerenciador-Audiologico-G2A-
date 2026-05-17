@@ -23,7 +23,7 @@ const addHeadersAndFooters = (doc: jsPDF, pageCount: number, reportTitle: string
     const logoX = (pageWidth - logoWidth) / 2;
     const logoY = (pageHeight - logoHeight) / 2;
     doc.saveGraphicsState(); // Salva o estado atual
-    doc.setGState(new doc.GState({ opacity: 0.1 })); // Define a opacidade
+    doc.setGState(new (doc as any).GState({ opacity: 0.1 })); // Define a opacidade
     doc.addImage(G2A_LOGO_BASE64, 'PNG', logoX, logoY, logoWidth, logoHeight);
     doc.restoreGraphicsState(); // Restaura o estado para não afetar outros elementos
 
