@@ -305,7 +305,7 @@ export function AudiologicalRecordView({ workerId }: AudiologicalRecordViewProps
                   <Paper p="sm" withBorder className="bg-white">
                     <Text fw={700} mb="sm" c={ear === 'OD' ? 'red' : 'blue'}>Orelha {ear === 'OD' ? 'Direita' : 'Esquerda'} ({ear})</Text>
                     
-                    <Table size="sm" verticalSpacing="xs" withTableBorder>
+                    <Table verticalSpacing="xs" withTableBorder>
                       <Table.Thead className="bg-slate-50">
                         <Table.Tr>
                           <Table.Th>Métrica</Table.Th>
