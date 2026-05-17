@@ -50,7 +50,7 @@ export function PatientList({ data, loading, onEdit }: PatientListProps) {
     setAnalysisLoading(true);
     setAnalysisContent(null);
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/patients/${patient.id}/analysis?company_id=${companyId}`);
+      const response = await fetch(`https://g2a-brain-api-575936240892.us-central1.run.app/api/v1/patients/${patient.id}/analysis?company_id=${companyId}`);
       if (!response.ok) throw new Error('Falha ao gerar análise.');
       const result = await response.json();
       setAnalysisContent(result.analysis);
