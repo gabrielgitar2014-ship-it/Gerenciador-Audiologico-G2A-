@@ -35,9 +35,7 @@ const navData = [
   { link: 'exames', label: 'Exames', icon: IconFileText },
   { link: 'pca', label: 'Monitoriamento do PCA', icon: IconStethoscope },
   { link: 'relatorios', label: 'Relatórios', icon: IconChartBar },
-  { link: 'configuracoes', label: 'Configurações', icon: IconSettings },
-  { link: 'logs/processing', label: 'Logs', icon: IconTerminal },
-  
+ 
 ];
 
 export function AppLayout() {
