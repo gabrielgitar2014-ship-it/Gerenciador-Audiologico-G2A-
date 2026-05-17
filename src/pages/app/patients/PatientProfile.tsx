@@ -219,7 +219,7 @@ export function PatientProfile() {
         
       } else {
         const endpoint = type === 'predictive' ? 'predictive-risk' : 'analysis';
-        const response = await fetch(`http://localhost:8000/api/v1/patients/${patientId}/${endpoint}?company_id=${companyId}`);
+        const response = await fetch(`https://g2a-brain-api-575936240892.us-central1.run.app/api/v1/patients/${patientId}/${endpoint}?company_id=${companyId}`);
         if (!response.ok) throw new Error('Falha ao gerar análise.');
         const result = await response.json();
         
