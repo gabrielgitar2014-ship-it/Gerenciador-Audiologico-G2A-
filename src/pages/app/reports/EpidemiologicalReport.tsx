@@ -30,7 +30,7 @@ export function EpidemiologicalReport() {
     setReportContent(null);
     try {
       const profId = user?.id || '';
-      const response = await fetch(`http://localhost:8000/api/v1/reports/epidemiological?company_id=${companyId}&year=${year}&professional_id=${profId}`, {
+      const response = await fetch(`https://g2a-brain-api-575936240892.us-central1.run.app/api/v1/reports/epidemiological?company_id=${companyId}&year=${year}&professional_id=${profId}`, {
         method: 'GET',
       });
 
@@ -145,3 +145,4 @@ export function EpidemiologicalReport() {
     </div>
   );
 }
+ 
