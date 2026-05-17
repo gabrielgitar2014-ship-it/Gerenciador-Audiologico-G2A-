@@ -21,7 +21,7 @@ dayjs.locale('pt-br');
 const FREQUENCIES = [250, 500, 750, 1000, 1500, 2000, 3000, 4000, 6000, 8000];
 
 // URL da sua API em Python (Cérebro G2A) rodando localmente
-const G2A_BRAIN_API_URL = "http://localhost:8000/api/v1/exams";
+const G2A_BRAIN_API_URL = "https://g2a-brain-api-575936240892.us-central1.run.app/api/v1/exams";
 
 // Tipagem do Grid de Digitação
 type GridRow = 'od-air' | 'od-bone' | 'oe-air' | 'oe-bone';
