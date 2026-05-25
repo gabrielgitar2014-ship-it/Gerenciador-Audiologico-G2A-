@@ -28,9 +28,9 @@ import { toast } from 'sonner';
 // Esquema de validação com Zod
 const gheSchema = z.object({
   name: z.string().min(3, { message: 'O nome do GHE deve ter pelo menos 3 caracteres.' }),
-  has_noise_risk: z.boolean().default(false),
+  has_noise_risk: z.boolean(),
   noise_level_db: z.number().nullable().optional(),
-  has_chemical_risk: z.boolean().default(false),
+  has_chemical_risk: z.boolean(),
   epi_ca: z.string().nullable().optional(),
   epi_nrrsf: z.number().nullable().optional(),
 });
@@ -237,9 +237,10 @@ export function GHEs() {
             </SimpleGrid>
 
             {watchNoiseRisk && (
-                <NumberInput
+                <TextInput
                     label="Nível de Ruído (dB)"
                     placeholder="Ex: 85"
+                    type="number"
                     {...register('noise_level_db', { valueAsNumber: true })}
                     error={errors.noise_level_db?.message}
                     mt="md"
@@ -252,9 +253,10 @@ export function GHEs() {
                     placeholder="Ex: 12345"
                     {...register('epi_ca')}
                 />
-                <NumberInput
+                <TextInput
                     label="NRRsf do EPI"
                     placeholder="Ex: 18"
+                    type="number"
                     {...register('epi_nrrsf', { valueAsNumber: true })}
                 />
             </SimpleGrid>
