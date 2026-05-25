@@ -37,7 +37,7 @@ export function ImportCases() {
             setProgress((prev) => (prev < 90 ? prev + 10 : prev));
         }, 500);
 
-        const response = await fetch('https://g2a-brain-575936240892.us-central1.run.app/v1/import-legacy/parse', {
+        const response = await fetch('https://g2a-brain-575936240892.us-central1.run.app/api/v1/import-legacy/parse', {
             method: 'POST',
             body: formData,
         });
@@ -88,7 +88,7 @@ export function ImportCases() {
               data: parsedData
           };
 
-          const response = await fetch('http://localhost:8000/api/v1/import-legacy/save', {
+          const response = await fetch('https://g2a-brain-575936240892.us-central1.run.app/api/v1/import-legacy/save', {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json'
