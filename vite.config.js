@@ -12,7 +12,7 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'Gerenciador Inteligente de Informações Audiólogicas',
-        short_name: 'G2A,
+        short_name: 'G2A',
         description: 'Gerenciador do PCA',
         theme_color: '#ffffff',
         icons: [
