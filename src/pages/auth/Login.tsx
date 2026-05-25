@@ -58,7 +58,7 @@ export function Login() {
           
           <div className="text-center mb-8">
             <img src="/logo.png" alt="G2A Logo" className="h-20 mx-auto mb-4 object-contain" />
-            <Title order={1} className="text-2xl font-bold text-slate-800">Portal G2A</Title>
+            <Title order={1} className="text-2xl font-bold text-slate-800">GIIA</Title>
             <Text c="dimmed" size="sm">Gestão Audiológica Profissional</Text>
           </div>
 
