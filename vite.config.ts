@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Nome do seu App',
-        short_name: 'App',
-        description: 'Descrição do seu incrível aplicativo',
+        name: 'Gerenciador Inteligente de Informações Audiólogicas',
+        short_name: 'G2A',
+        description: 'gerenciador de PCA',
         theme_color: '#ffffff',
         icons: [
           {
