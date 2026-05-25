@@ -155,7 +155,7 @@ export function CompanySelection() {
         <div className="flex flex-col sm:flex-row justify-between items-center mb-12 gap-6">
           <div className="text-center sm:text-left">
             <Title order={1} className="text-3xl font-bold text-slate-800 tracking-tight">
-              Olá, Fono. {profile?.full_name?.split(' ')[0]}
+              Olá,{profile?.full_name?.split(' ')[0]}.
             </Title>
             <Text c="dimmed" size="lg" className="font-medium">
               Escolha uma unidade de atendimento
