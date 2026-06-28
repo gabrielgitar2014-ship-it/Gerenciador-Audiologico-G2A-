@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useDebouncedValue } from '@mantine/hooks';
 import { supabase } from '../../../lib/supabase';
 import {
   Table,
   Button,
   Modal,
   TextInput,
+  Select,
   Group,
   ActionIcon,
   Text,
@@ -44,8 +46,32 @@ export function JobRoles() {
   const [modalOpened, setModalOpened] = useState(false);
   const [editingJobRole, setEditingJobRole] = useState<JobRole | null>(null);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<JobRoleFormData>({
+  const { register, handleSubmit, reset, setValue, control, formState: { errors } } = useForm<JobRoleFormData>({
     resolver: zodResolver(jobRoleSchema),
+  });
+
+  // Busca de CBO (server-side na tabela `cbo`)
+  const [cboSearch, setCboSearch] = useState('');
+  const [debouncedCbo] = useDebouncedValue(cboSearch, 250);
+
+  const { data: cboOptions, isFetching: cboLoading } = useQuery<{ value: string; label: string }[]>({
+    queryKey: ['cbo-search', debouncedCbo],
+    queryFn: async () => {
+      const term = debouncedCbo.trim().replace(/[,()%*]/g, '');
+      if (term.length < 2) return [];
+      const { data, error } = await supabase
+        .from('cbo')
+        .select('codigo, codigo_formatado, titulo')
+        .ilike('termos_busca', `%${term}%`)
+        .order('titulo', { ascending: true })
+        .limit(20);
+      if (error) throw new Error(error.message);
+      return (data || []).map((c) => ({
+        value: c.codigo_formatado,
+        label: `${c.codigo_formatado} — ${c.titulo}`,
+      }));
+    },
+    enabled: debouncedCbo.trim().length >= 2,
   });
 
   // 1. BUSCAR DADOS (READ)
@@ -110,6 +136,7 @@ export function JobRoles() {
 
   const openModal = (jobRole: JobRole | null = null) => {
     setEditingJobRole(jobRole);
+    setCboSearch('');
     if (jobRole) {
       setValue('name', jobRole.name);
       setValue('cbo', jobRole.cbo);
@@ -122,6 +149,7 @@ export function JobRoles() {
   const closeModal = () => {
     setModalOpened(false);
     setEditingJobRole(null);
+    setCboSearch('');
     reset();
   };
 
@@ -197,12 +225,36 @@ export function JobRoles() {
                 error={errors.name?.message}
                 required
             />
-            <TextInput
-                label="CBO"
-                placeholder="Ex: 2124-05"
-                {...register('cbo')}
-                error={errors.cbo?.message}
-                mt="md"
+            <Controller
+                name="cbo"
+                control={control}
+                render={({ field }) => {
+                    const options = [...(cboOptions || [])];
+                    if (field.value && !options.some((o) => o.value === field.value)) {
+                        options.unshift({ value: field.value, label: field.value });
+                    }
+                    return (
+                        <Select
+                            label="CBO"
+                            placeholder="Busque por cargo ou código (ex: enfermeiro ou 2235)"
+                            mt="md"
+                            searchable
+                            clearable
+                            data={options}
+                            value={field.value || null}
+                            onChange={(v) => field.onChange(v || undefined)}
+                            searchValue={cboSearch}
+                            onSearchChange={setCboSearch}
+                            filter={({ options }) => options}
+                            nothingFoundMessage={
+                                cboLoading ? 'Buscando…'
+                                : cboSearch.trim().length < 2 ? 'Digite ao menos 2 caracteres'
+                                : 'Nenhum CBO encontrado'
+                            }
+                            error={errors.cbo?.message}
+                        />
+                    );
+                }}
             />
             <Group justify="flex-end" mt="md">
                 <Button variant="default" onClick={closeModal}>Cancelar</Button>
