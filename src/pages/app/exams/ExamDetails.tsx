@@ -6,7 +6,7 @@ import {
 import {
   IconArrowLeft, IconEar, IconPrinter, IconCalendarEvent,
   IconAlertCircle, IconBrain, IconStethoscope, IconFileDescription,
-  IconPencil, IconClipboardHeart, IconEarOff, IconClock
+  IconPencil, IconClipboardHeart, IconEarOff, IconClock, IconSparkles
 } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -14,15 +14,40 @@ import { AudiogramGraph } from '../../../components/Audiogram/AudiogramGraph';
 import { AuditLogPanel } from '../../../components/AuditLogPanel';
 import { toast } from 'sonner';
 import { supabase } from '../../../lib/supabase';
+import { G2A_BRAIN_URL } from '../../../lib/g2aBrain';
 import dayjs from 'dayjs';
+
+// Mapeia os limiares salvos no Supabase (chaves "250".."8000"/"500".."4000")
+// para o formato LimiaresOrelha esperado pelo G2A Brain (hz_250.."co_4000").
+const FREQ_AIR_MAP: Record<string, string> = {
+  '250': 'hz_250', '500': 'hz_500', '1000': 'hz_1000', '2000': 'hz_2000',
+  '3000': 'hz_3000', '4000': 'hz_4000', '6000': 'hz_6000', '8000': 'hz_8000',
+};
+const FREQ_BONE_MAP: Record<string, string> = {
+  '500': 'co_500', '1000': 'co_1000', '2000': 'co_2000', '4000': 'co_4000',
+};
+
+function montarLimiares(thresholdsAir: Record<string, number> | null, thresholdsBone: Record<string, number> | null) {
+  const limiares: Record<string, number> = {};
+  Object.entries(thresholdsAir || {}).forEach(([freq, valor]) => {
+    const campo = FREQ_AIR_MAP[freq];
+    if (campo && valor !== null && valor !== undefined) limiares[campo] = Number(valor);
+  });
+  Object.entries(thresholdsBone || {}).forEach(([freq, valor]) => {
+    const campo = FREQ_BONE_MAP[freq];
+    if (campo && valor !== null && valor !== undefined) limiares[campo] = Number(valor);
+  });
+  return limiares;
+}
 
 export function ExamDetails() {
   const { examId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [examData, setExamData] = useState<any>(null);
-  const [diagnosis, setDiagnosis] = useState<any>(null); 
+  const [diagnosis, setDiagnosis] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [generatingLaudo, setGeneratingLaudo] = useState(false);
 
   useEffect(() => {
     const fetchExam = async () => {
@@ -66,6 +91,74 @@ export function ExamDetails() {
     window.print();
   };
 
+  const handleGerarLaudoIA = async () => {
+    if (!examData || !diagnosis) return;
+    setGeneratingLaudo(true);
+    try {
+      const { data: employee, error: employeeError } = await supabase
+        .from('employees')
+        .select('*, sectors(name), job_roles(name), companies(nome_fantasia), ghe(has_noise_risk)')
+        .eq('id', examData.employee_id)
+        .single();
+
+      if (employeeError) throw employeeError;
+
+      const trabalhador = {
+        funcionario_id: employee.id,
+        nome: employee.full_name,
+        data_nascimento: employee.birth_date,
+        sexo: employee.gender,
+        cargo: employee.job_roles?.name ?? null,
+        setor: employee.sectors?.name ?? null,
+        empresa: employee.companies?.nome_fantasia ?? null,
+        data_admissao: employee.admission_date,
+        exposto_ruido: employee.exposto_ruido ?? employee.ghe?.has_noise_risk ?? false,
+        anos_exposicao_ruido: employee.anos_exposicao_ruido,
+        usa_epi_auditivo: employee.usa_epi_auditivo,
+      };
+
+      const exame_atual = {
+        audiometria_id: examData.id,
+        data_exame: examData.exam_date,
+        tipo: examData.exam_type,
+        orelha_direita: montarLimiares(examData.thresholds_od_air, examData.thresholds_od_bone),
+        orelha_esquerda: montarLimiares(examData.thresholds_oe_air, examData.thresholds_oe_bone),
+        repouso_auditivo_horas: examData.repouso_auditivo_horas ?? null,
+        uso_epi_no_dia: examData.uso_epi_no_dia ?? null,
+      };
+
+      const response = await fetch(`${G2A_BRAIN_URL}/gerar/laudo-individual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input_dados: {
+            trabalhador,
+            exame_atual,
+            exame_referencia: null,
+            historico_exames: [],
+          },
+          resultado_ocupacional: diagnosis.ocupacional,
+          resultado_clinico: diagnosis.clinico,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao gerar laudo (${response.status})`);
+      }
+
+      const result = await response.json();
+      const janela = window.open('', '_blank');
+      if (janela) {
+        janela.document.write(result.conteudo_html);
+        janela.document.close();
+      }
+    } catch (err: any) {
+      toast.error('Erro ao gerar laudo com IA: ' + (err?.message || 'Erro desconhecido'));
+    } finally {
+      setGeneratingLaudo(false);
+    }
+  };
+
   if (loading) return <LoadingOverlay visible overlayProps={{ blur: 2 }} />;
   if (error) return <Alert color="red" icon={<IconAlertCircle />}>{error}</Alert>;
   if (!examData) return null;
@@ -79,7 +172,17 @@ export function ExamDetails() {
   const fonoCRFa = examData.professional?.crfa_numero ? `CRFa: ${examData.professional.crfa_numero}` : 'CRFa: ---';
   const fonoRegiao = examData.professional?.crfa_regiao ? ` - ${examData.professional.crfa_regiao}ª Região` : '';
 
-  const clinico = diagnosis?.clinico || {};
+  const ocupacional = diagnosis?.ocupacional || {};
+  const orelhaResumo = (orelha: any) => ({
+    mediaOms: orelha?.media_tritonal_conversacao,
+    mediaPca346: orelha?.media_tritonal_pca,
+    grauOms: orelha?.classificacao_conversacao,
+    tipoPerda: orelha?.entalhe_acustico_detectado
+      ? 'Entalhe acústico (3k-6k)'
+      : (orelha?.classificacao_pca ?? 'Sem entalhe característico'),
+  });
+  const od = orelhaResumo(ocupacional.orelha_direita);
+  const oe = orelhaResumo(ocupacional.orelha_esquerda);
   const aiInsights = diagnosis?.ai_insights || "Processando análise...";
   const isNormal = examData.result_status === 'normal';
 
@@ -112,6 +215,15 @@ export function ExamDetails() {
               Editado
             </Badge>
           )}
+          <Button
+            color="violet"
+            variant="light"
+            leftSection={<IconSparkles size={18}/>}
+            onClick={handleGerarLaudoIA}
+            loading={generatingLaudo}
+          >
+            Gerar Laudo Completo (IA)
+          </Button>
           <Button color="blue" leftSection={<IconPrinter size={18}/>} onClick={handlePrint}>
             Gerar PDF do Laudo
           </Button>
@@ -229,19 +341,19 @@ export function ExamDetails() {
           <Grid.Col span={6}>
             <Card withBorder radius="md">
               <Text fw={700} c="red.8" mb="xs">Orelha Direita (OD)</Text>
-              <Text size="sm">Média Tritonal (Silman e Silverman 1997): <b>{clinico.od?.media_oms ?? '--'} dB</b></Text>
-              <Text size="sm">Média PCA (3k, 4k, 6k): <b>{clinico.od?.media_pca_346 ?? '--'} dB</b></Text>
-              <Text size="sm" mt="xs">Grau: <b>{clinico.od?.grau_oms}</b></Text>
-              <Text size="sm">Configuração: <b>{clinico.od?.tipo_perda}</b></Text>
+              <Text size="sm">Média Tritonal (Silman e Silverman 1997): <b>{od.mediaOms ?? '--'} dB</b></Text>
+              <Text size="sm">Média PCA (3k, 4k, 6k): <b>{od.mediaPca346 ?? '--'} dB</b></Text>
+              <Text size="sm" mt="xs">Grau: <b>{od.grauOms ?? '--'}</b></Text>
+              <Text size="sm">Configuração: <b>{od.tipoPerda}</b></Text>
             </Card>
           </Grid.Col>
           <Grid.Col span={6}>
             <Card withBorder radius="md">
               <Text fw={700} c="blue.8" mb="xs">Orelha Esquerda (OE)</Text>
-              <Text size="sm">Média Tritonal (Silman e Silverman): <b>{clinico.oe?.media_oms ?? '--'} dB</b></Text>
-              <Text size="sm">Média PCA (3k, 4k, 6k): <b>{clinico.oe?.media_pca_346 ?? '--'} dB</b></Text>
-              <Text size="sm" mt="xs">Grau: <b>{clinico.oe?.grau_oms}</b></Text>
-              <Text size="sm">Configuração: <b>{clinico.oe?.tipo_perda}</b></Text>
+              <Text size="sm">Média Tritonal (Silman e Silverman): <b>{oe.mediaOms ?? '--'} dB</b></Text>
+              <Text size="sm">Média PCA (3k, 4k, 6k): <b>{oe.mediaPca346 ?? '--'} dB</b></Text>
+              <Text size="sm" mt="xs">Grau: <b>{oe.grauOms ?? '--'}</b></Text>
+              <Text size="sm">Configuração: <b>{oe.tipoPerda}</b></Text>
             </Card>
           </Grid.Col>
         </Grid>
